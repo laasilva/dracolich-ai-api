@@ -1,0 +1,23 @@
+spring:
+  data:
+    mongodb:
+      auto-index-creation: true
+      database: dracolich-ai-db
+      uri: mongodb://localhost:27017/dracolich-ai-db
+
+  ai:
+    anthropic:
+      api-key: your-anthropic-api-key-here
+
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:5173
+
+mtg-library:
+  api:
+    base-url: http://localhost:8080/dracolich/mtg-library/api/v0
+
+logging:
+  level:
+    dm.dracolich: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.data.mongodb: INFO

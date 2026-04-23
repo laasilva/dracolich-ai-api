@@ -1,0 +1,149 @@
+name: Tag and Release
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  increment-tag:
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.calc_tag.outputs.new_tag }}
+      RELEASE_VERSION: ${{ steps.calc_tag.outputs.new_tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Fetch all tags
+        run: git fetch --tags
+
+      - name: Get latest tag
+        id: get_latest_tag
+        run: |
+          latest=$(git tag --list --sort=-v:refname 'v*' | head -n 1)
+          if [ -z "$latest" ]; then
+            latest="v0.0.0"
+          fi
+          echo "latest_tag=$latest" >> $GITHUB_OUTPUT
+
+      - name: Get commit message
+        id: get_commit
+        run: echo "message=$(git log -1 --pretty=%B)" >> $GITHUB_OUTPUT
+
+      - name: Calculate new tag
+        id: calc_tag
+        run: |
+          latest=${{ steps.get_latest_tag.outputs.latest_tag }}
+          msg="${{ steps.get_commit.outputs.message }}"
+          # Remove the v prefix and separate numbers
+          ver="${latest#v}"
+          IFS='.' read -r major minor patch <<< "$ver"
+          if [[ "$msg" == feature* ]]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
+          elif [[ "$msg" == fix* ]]; then
+            patch=$((patch + 1))
+          # Optional: add logic for minor bumps (e.g., if commit starts with "update")
+          elif [[ "$msg" == update* ]]; then
+            minor=$((minor + 1))
+            patch=0
+          fi
+          new_tag="v${major}.${minor}.${patch}"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+
+      - name: Print new tag
+        run: echo "New tag is ${{ steps.calc_tag.outputs.new_tag }}"
+
+      - name: set version global env
+        run: echo "RELEASE_VERSION=${{ steps.calc_tag.outputs.new_tag }}" >> $GITHUB_ENV
+  tag-and-release:
+    needs: increment-tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create new tag
+        run: |
+          git tag ${{ needs.increment-tag.outputs.new_tag }}
+          git push origin ${{ needs.increment-tag.outputs.new_tag }}
+
+      - name: Create Release for latest
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ needs.increment-tag.outputs.new_tag }}
+          name: Release ${{ needs.increment-tag.outputs.new_tag }}
+          body: Release for ${{ needs.increment-tag.outputs.new_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  maven-deploy:
+    needs: [increment-tag, tag-and-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.increment-tag.outputs.new_tag }}
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          server-id: github
+          settings-path: ${{ github.workspace }}
+      - name: Configure Maven for GitHub Packages
+        run: |
+          echo "<settings>
+            <servers>
+              <server>
+                <id>github</id>
+                <username>${{ github.actor }}</username>
+                <password>${{ secrets.GITHUB_TOKEN }}</password>
+              </server>
+            </servers>
+            <profiles>
+              <profile>
+                <id>github</id>
+                <repositories>
+                  <repository>
+                    <id>github</id>
+                    <url>https://maven.pkg.github.com/laasilva/dracolich-ai-api</url>
+                    <snapshots>
+                      <enabled>true</enabled>
+                    </snapshots>
+                  </repository>
+                </repositories>
+              </profile>
+            </profiles>
+            <activeProfiles>
+              <activeProfile>github</activeProfile>
+            </activeProfiles>
+          </settings>" > $GITHUB_WORKSPACE/settings.xml
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG=${{ needs.increment-tag.outputs.new_tag }}
+          VERSION=${TAG#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml -s $GITHUB_WORKSPACE/settings.xml -Drevision=${{ steps.version.outputs.version }}
+
+      - name: Publish to GitHub Packages Apache Maven
+        run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml -Drevision=${{ steps.version.outputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

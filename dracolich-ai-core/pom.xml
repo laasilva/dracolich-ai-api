@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>dm.dracolich</groupId>
+        <artifactId>dracolich-ai-api</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>dracolich-ai-core</artifactId>
+
+    <properties>
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <spring.ai.anthropic.version>1.0.0-M6</spring.ai.anthropic.version>
+        <junit.jupiter.version>6.0.3</junit.jupiter.version>
+        <mockito.version>5.20.0</mockito.version>
+    </properties>
+
+    <dependencies>
+        <!-- Internal modules -->
+        <dependency>
+            <groupId>dm.dracolich</groupId>
+            <artifactId>dracolich-ai-dto</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>dm.dracolich</groupId>
+            <artifactId>dracolich-ai-client</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>dm.dracolich</groupId>
+            <artifactId>dracolich-ai-datasource</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <!-- Spring AI -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-anthropic</artifactId>
+            <version>${spring.ai.anthropic.version}</version>
+        </dependency>
+
+        <!-- tests -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
+            <version>${junit.jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>${mockito.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>dm.dracolich</groupId>
+    <artifactId>dracolich-ai-api</artifactId>
+    <version>0.0.1-LOCALHOST</version>
+  </parent>
+  <artifactId>dracolich-ai-client</artifactId>
+  <version>0.0.1-LOCALHOST</version>
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+    </license>
+  </licenses>
+  <properties>
+    <maven.compiler.target>25</maven.compiler.target>
+    <maven.compiler.source>25</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <spring.ai.anthropic.version>1.0.0-M6</spring.ai.anthropic.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>dm.dracolich</groupId>
+      <artifactId>mtg-library-api-dto</artifactId>
+      <version>1.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+  </dependencies>
+</project>
