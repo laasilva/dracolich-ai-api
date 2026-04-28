@@ -34,3 +34,16 @@ spring.ai:
 mtg-library:
   api:
     base-url: ${MTG_LIBRARY_API_BASE_URL}
+
+management:
+  server:
+    port: 7980
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+    endpoint:
+      health:
+        show-details: true
+        probes:
+          enabled: true
