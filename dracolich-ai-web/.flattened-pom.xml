@@ -5,10 +5,10 @@
   <parent>
     <groupId>dm.dracolich</groupId>
     <artifactId>dracolich-ai-api</artifactId>
-    <version>0.0.1-LOCALHOST</version>
+    <version>1.1.0</version>
   </parent>
   <artifactId>dracolich-ai-web</artifactId>
-  <version>0.0.1-LOCALHOST</version>
+  <version>1.1.0</version>
   <licenses>
     <license>
       <name>Apache License, Version 2.0</name>
@@ -27,22 +27,22 @@
     <dependency>
       <groupId>dm.dracolich</groupId>
       <artifactId>dracolich-ai-dto</artifactId>
-      <version>${revision}</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>dm.dracolich</groupId>
       <artifactId>dracolich-ai-core</artifactId>
-      <version>${revision}</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>dm.dracolich</groupId>
       <artifactId>dracolich-ai-client</artifactId>
-      <version>${revision}</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>dm.dracolich</groupId>
       <artifactId>dracolich-ai-datasource</artifactId>
-      <version>${revision}</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>io.swagger.core.v3</groupId>

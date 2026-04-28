@@ -23,11 +23,13 @@ public class SuggestCardsTool {
 
     @Tool(description = "Formally suggest cards for the user's deck. Call this whenever you recommend cards. " +
             "Pass a JSON array where each element has: cardName, category (Ramp, Removal, Card Draw, Win Condition, Creature, Land, etc.), " +
-            "reason (1 sentence), and synergyScore (0.0 to 1.0). " +
+            "reason (1 sentence), synergyScore (0.0 to 1.0), and optionally topic (must match a topic key " +
+            "from a prior reportIssues call, like \"removal_count\" or \"card_draw\", to link the suggestion to " +
+            "a specific finding). Omit topic for non-analysis sessions or if the suggestion isn't tied to a finding. " +
             "Do NOT list these cards again in your text response.")
     public String suggestCards(
             @ToolParam(description = "The session ID") String sessionId,
-            @ToolParam(description = "JSON array of suggestions, e.g. [{\"cardName\":\"Sol Ring\",\"category\":\"Ramp\",\"reason\":\"Essential mana acceleration\",\"synergyScore\":0.9}]") String suggestionsJson
+            @ToolParam(description = "JSON array of suggestions, e.g. [{\"cardName\":\"Counterspell\",\"category\":\"Interaction\",\"reason\":\"Cheap counter for opposing threats\",\"synergyScore\":0.9,\"topic\":\"removal_count\"}]") String suggestionsJson
     ) {
         List<CardSuggestion> suggestions;
         try {
@@ -49,6 +51,7 @@ public class SuggestCardsTool {
                             .category(s.category())
                             .reason(s.reason())
                             .synergyScore(s.synergyScore())
+                            .topic(s.topic())
                             .build())
                     .toList();
 
@@ -68,6 +71,7 @@ public class SuggestCardsTool {
             String cardName,
             String category,
             String reason,
-            Double synergyScore
+            Double synergyScore,
+            String topic
     ) {}
 }

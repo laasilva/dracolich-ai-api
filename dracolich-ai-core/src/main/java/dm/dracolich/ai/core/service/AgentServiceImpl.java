@@ -1,9 +1,6 @@
 package dm.dracolich.ai.core.service;
 
 import dm.dracolich.ai.client.mtg.MtgLibraryClient;
-import dm.dracolich.ai.core.tool.CardSearchTool;
-import dm.dracolich.ai.core.tool.DeckAnalysisTool;
-import dm.dracolich.ai.core.tool.SuggestCardsTool;
 import dm.dracolich.ai.datasource.entity.ChatMessageEntity;
 import dm.dracolich.ai.datasource.entity.DeckCardEntity;
 import dm.dracolich.ai.datasource.entity.SessionEntity;
@@ -326,14 +323,19 @@ public class AgentServiceImpl implements AgentService {
         if (session.getSessionType() == SessionType.ANALYSIS) {
             sb.append("""
 
-                    This is a deck ANALYSIS session. Workflow:
-                    1. Call analyzeDeck to compute stats (mana curve, color balance, lands, etc.)
-                    2. Call reportIssues with structured findings — use stable topic keys like
+                    This is a deck ANALYSIS session. Pre-computed stats (mana curve, lands, color
+                    pie, average CMC, warnings) will be included in the user message — use those
+                    directly, do NOT estimate or recompute them. Workflow:
+                    1. Call reportIssues with structured findings — use stable topic keys like
                        "mana_curve", "color_balance", "removal_count", "card_draw", "land_count",
                        "win_conditions". One reportIssues call with the full array of findings.
                        severity = ERROR (illegal/broken) | WARNING (concerning but legal) | INFO (advisory).
-                    3. Call suggestCards with cards that address the issues you reported.
-                    4. Write a brief 2-3 sentence summary. Do NOT repeat issue details or card lists in
+                    2. Call suggestCards with cards that address the issues you reported. CRITICAL:
+                       set the "topic" field on each suggestion to match the topic key of the issue
+                       it solves. For example, if you reported a "removal_count" issue and suggest
+                       "Swords to Plowshares", that suggestion's topic should be "removal_count".
+                       This lets the frontend render suggestions grouped by problem.
+                    3. Write a brief 2-3 sentence summary. Do NOT repeat issue details or card lists in
                        your text — both are persisted structurally and rendered visually by the frontend.
                     """);
         }

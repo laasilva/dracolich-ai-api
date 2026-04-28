@@ -1,7 +1,6 @@
 package dm.dracolich.ai.core.config;
 
 import dm.dracolich.ai.core.tool.CardSearchTool;
-import dm.dracolich.ai.core.tool.DeckAnalysisTool;
 import dm.dracolich.ai.core.tool.ReportIssuesTool;
 import dm.dracolich.ai.core.tool.SuggestCardsTool;
 import org.springframework.ai.anthropic.AnthropicChatModel;
@@ -51,15 +50,18 @@ public class AnthropicConfig {
      * AgentService should inject this — NOT the Builder.
      * Re-registering tools per-call on a shared Builder accumulates duplicates
      * and crashes Spring AI with "Multiple tools with the same name".
+     *
+     * <p>Stats (mana curve, color pie, lands, etc.) are pre-computed by deck-builder-api
+     * and injected into the user prompt — no stats tool is registered, which saves
+     * ~70 mtg-library-api round trips per analyze call.</p>
      */
     @Bean
     public ChatClient agentChatClient(ChatClient.Builder builder,
                                       CardSearchTool cardSearchTool,
-                                      DeckAnalysisTool deckAnalysisTool,
                                       SuggestCardsTool suggestCardsTool,
                                       ReportIssuesTool reportIssuesTool) {
         return builder
-                .defaultTools(cardSearchTool, deckAnalysisTool, suggestCardsTool, reportIssuesTool)
+                .defaultTools(cardSearchTool, suggestCardsTool, reportIssuesTool)
                 .build();
     }
 }
