@@ -38,6 +38,8 @@ public class SessionEntity {
     private List<ChatMessageEntity> chatHistory;
     @Field("card_suggestions")
     private List<dm.dracolich.ai.dto.CardSuggestionDto> cardSuggestions;
+    @Field("analysis_issues")
+    private List<dm.dracolich.ai.dto.IssueDto> analysisIssues;
     @Field("total_input_tokens")
     private Long totalInputTokens;
     @Field("total_output_tokens")

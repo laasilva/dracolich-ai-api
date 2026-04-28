@@ -46,10 +46,7 @@ public class AgentServiceImpl implements AgentService {
 
     private final SessionRepository sessionRepository;
     private final MtgLibraryClient mtgClient;
-    private final ChatClient.Builder chatClientBuilder;
-    private final CardSearchTool cardSearchTool;
-    private final DeckAnalysisTool deckAnalysisTool;
-    private final SuggestCardsTool suggestCardsTool;
+    private final ChatClient agentChatClient;
 
     @Override
     public Mono<SessionDto> createSession(SessionCreateRequest request) {
@@ -104,11 +101,7 @@ public class AgentServiceImpl implements AgentService {
                 .flatMapMany(session -> {
                     List<Message> messages = buildMessages(session, userMessage);
 
-                    ChatClient client = chatClientBuilder
-                            .defaultTools(cardSearchTool, deckAnalysisTool, suggestCardsTool)
-                            .build();
-
-                    Flux<ChatResponse> responseStream = client.prompt()
+                    Flux<ChatResponse> responseStream = agentChatClient.prompt()
                             .messages(messages)
                             .stream()
                             .chatResponse();
@@ -333,7 +326,15 @@ public class AgentServiceImpl implements AgentService {
         if (session.getSessionType() == SessionType.ANALYSIS) {
             sb.append("""
 
-                    This is a deck ANALYSIS session. Use the deck analysis tool first, then summarize findings and suggest improvements via the suggest_cards tool.
+                    This is a deck ANALYSIS session. Workflow:
+                    1. Call analyzeDeck to compute stats (mana curve, color balance, lands, etc.)
+                    2. Call reportIssues with structured findings — use stable topic keys like
+                       "mana_curve", "color_balance", "removal_count", "card_draw", "land_count",
+                       "win_conditions". One reportIssues call with the full array of findings.
+                       severity = ERROR (illegal/broken) | WARNING (concerning but legal) | INFO (advisory).
+                    3. Call suggestCards with cards that address the issues you reported.
+                    4. Write a brief 2-3 sentence summary. Do NOT repeat issue details or card lists in
+                       your text — both are persisted structurally and rendered visually by the frontend.
                     """);
         }
 
@@ -408,6 +409,7 @@ public class AgentServiceImpl implements AgentService {
                         ? entity.getDeckList().stream().map(this::toDeckCardDto).toList()
                         : null)
                 .cardSuggestions(entity.getCardSuggestions())
+                .analysisIssues(entity.getAnalysisIssues())
                 .totalInputTokens(entity.getTotalInputTokens())
                 .totalOutputTokens(entity.getTotalOutputTokens())
                 .createdAt(entity.getCreatedAt())

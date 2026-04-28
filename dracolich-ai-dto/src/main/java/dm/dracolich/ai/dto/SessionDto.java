@@ -36,6 +36,8 @@ public class SessionDto {
     private DeckStatsDto deckStats;
     @JsonProperty("card_suggestions")
     private List<CardSuggestionDto> cardSuggestions;
+    @JsonProperty("analysis_issues")
+    private List<IssueDto> analysisIssues;
     @JsonProperty("total_input_tokens")
     private Long totalInputTokens;
     @JsonProperty("total_output_tokens")

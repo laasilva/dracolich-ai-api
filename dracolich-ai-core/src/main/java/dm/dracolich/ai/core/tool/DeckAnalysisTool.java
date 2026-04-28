@@ -12,7 +12,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.*;
 
 @Component
@@ -39,6 +43,9 @@ public class DeckAnalysisTool {
         }
     }
 
+    private static final Duration FETCH_TIMEOUT = Duration.ofSeconds(30);
+    private static final int CONCURRENCY = 16;
+
     private String doAnalyzeDeck(String sessionId) {
         SessionEntity session = sessionRepository.findById(sessionId).toFuture().join();
         if (session == null) {
@@ -48,6 +55,31 @@ public class DeckAnalysisTool {
         List<DeckCardEntity> deck = session.getDeckList();
         if (deck == null || deck.isEmpty()) {
             return "Deck is empty. No cards to analyze.";
+        }
+
+        // Parallel-fetch all unique cards once. ~16 concurrent requests, capped to avoid
+        // overwhelming mtg-library-api. Whole batch times out after FETCH_TIMEOUT.
+        Set<String> uniqueIds = new HashSet<>();
+        for (DeckCardEntity dc : deck) {
+            if (dc.getCardId() != null) uniqueIds.add(dc.getCardId());
+        }
+        Map<String, CardDto> cardsById;
+        try {
+            cardsById = Flux.fromIterable(uniqueIds)
+                    .flatMap(id -> mtgClient.fetchCardById(id)
+                            .map(card -> Map.entry(id, card))
+                            .onErrorResume(e -> {
+                                log.warn("Failed to fetch card {}: {}", id, e.getMessage());
+                                return Mono.empty();
+                            }), CONCURRENCY)
+                    .collectMap(Map.Entry::getKey, Map.Entry::getValue)
+                    .timeout(FETCH_TIMEOUT)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .toFuture()
+                    .join();
+        } catch (Exception e) {
+            log.error("Card lookup batch failed for session {}: {}", sessionId, e.getMessage());
+            return "Deck analysis unavailable: card lookups timed out or failed.";
         }
 
         Map<Integer, Integer> manaCurve = new TreeMap<>();
@@ -64,12 +96,7 @@ public class DeckAnalysisTool {
             String category = deckCard.getCategory() != null ? deckCard.getCategory() : "Uncategorized";
             categoryCounts.merge(category, qty, Integer::sum);
 
-            CardDto card = null;
-            try {
-                card = mtgClient.fetchCardById(deckCard.getCardId()).toFuture().join();
-            } catch (Exception e) {
-                log.warn("Failed to fetch card {}: {}", deckCard.getCardId(), e.getMessage());
-            }
+            CardDto card = cardsById.get(deckCard.getCardId());
             if (card != null && card.getDefaultFace() != null) {
                 CardFaceDto face = card.getDefaultFace();
 
