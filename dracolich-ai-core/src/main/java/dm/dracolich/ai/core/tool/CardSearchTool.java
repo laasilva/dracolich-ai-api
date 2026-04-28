@@ -11,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
+import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,13 +54,20 @@ public class CardSearchTool {
         );
 
         try {
-            var result = mtgClient.searchCards(name, searchRecord, 0, 10).toFuture().join();
+            var result = mtgClient.searchCards(name, searchRecord, 0, 10)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .timeout(Duration.ofSeconds(15))
+                .toFuture().join();
+            
             if (result == null || result.content() == null || result.content().isEmpty()) {
                 return "No cards found matching the criteria.";
             }
 
             var sb = new StringBuilder();
-            sb.append("Found ").append(result.totalElements()).append(" cards (showing ").append(result.content().size()).append("):\n");
+
+            sb.append("Found ").append(result.totalElements()).append(" cards (showing ")
+                    .append(result.content().size()).append("):\n");
+
             for (var item : result.content()) {
                 CardDto card = MAPPER.convertValue(item, CardDto.class);
                 sb.append("- ").append(card.getName());
