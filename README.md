@@ -1,4 +1,4 @@
-# dracolich-ai-api
+# dracolich-ai-api 
 
 AI-powered deck building assistant for Magic: The Gathering. Uses Spring AI with Anthropic Claude to provide card suggestions, deck analysis, and synergy recommendations via SSE-streamed chat with tool-based architecture.
 
