@@ -8,11 +8,10 @@ spring:
       fail-on-null-for-primitives: false
   webflux:
     base-path: dracolich/ai/api/v0/
-  data:
-    mongodb:
-      database: ${MONGODB_DATABASE}
-      uri: ${MONGODB_URI}
-      auto-index-creation: false
+  mongodb:
+    database: ${MONGODB_DATABASE}
+    uri: ${MONGODB_URI}
+    auto-index-creation: false
 
 server:
   port: ${PORT:8080}
