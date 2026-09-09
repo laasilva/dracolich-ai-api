@@ -4,20 +4,23 @@ AI deck building assistant for MTG. Uses Spring AI 1.0.0-M6 + Anthropic Claude (
 
 ## Build & Run
 
-Requires forge:common installed locally and mtg-library-api running on port 8080.
+Requires forge:common (from GitHub Packages, or installed locally).
 
 ```bash
-# Build
 mvn clean install -s ~/.m2/settings-personal.xml
-
-# Run (port 8083, dev profile auto-active)
-mvn spring-boot:run -pl dracolich-ai-web -s ~/.m2/settings-personal.xml
 ```
 
-API keys go in `.env` at project root (gitignored):
-```
-ANTHROPIC_API_KEY=sk-ant-...
-```
+The service is deployed to the `dracolich-dev` cluster and reached through
+`https://dev.dracolich.app/dracolich/ai/api/v0/`. It is internal — only
+`dracolich-mtg-deck-builder-api` calls it, never the frontend. The deployed environment is the usual
+target; for pure code work `mvn clean install` is verification enough.
+
+Running it locally is expected when developing a feature or chasing a bug here. Create an
+uncommitted `dracolich-ai-web/src/main/resources/application-local.yml` (gitignored — never commit
+local config) and run with `SPRING_PROFILES_ACTIVE=local`; `application-dev.yml.example` is a
+starting point. It must supply `spring.mongodb.uri`, `spring.mongodb.database` and
+`spring.ai.anthropic.api-key`, which have no defaults. The service listens on port 8080 with actuator
+on 7980 — override `server.port` if another Dracolich service holds 8080.
 
 ## Module Structure
 
@@ -47,10 +50,12 @@ Base path: `/dracolich/ai/api/v0/`
 | Tool | Purpose | Token Cost |
 |------|---------|------------|
 | `CardSearchTool` | Broad card search via mtg-library-api. Returns compact format (name, cost, type, truncated oracle text). Max 10 results | 1 API call to library |
-| `DeckAnalysisTool` | Analyzes deck stats (mana curve, color balance, warnings). Fetches each card by ID | N API calls (1 per card) |
 | `SuggestCardsTool` | Persists structured suggestions to session. Accepts JSON string param (Spring AI generic type workaround) | 0 API calls (just MongoDB) |
+| `ReportIssuesTool` | Persists structured deck problems as `IssueDto` + `IssueSeverity` | 0 API calls (just MongoDB) |
 
-`SynergyFinderTool` was deleted — it made N+1 API calls per invocation.
+`DeckAnalysisTool` and `SynergyFinderTool` were both deleted for making N (or N+1) API calls per
+invocation. Deck stats now arrive pre-computed from `dracolich-mtg-deck-builder-api` and are injected
+into the prompt for ANALYSIS sessions.
 
 ## Error Handling
 
@@ -100,17 +105,21 @@ Token usage is logged at INFO level and persisted on `ChatMessageEntity` (per-me
 
 ## Swagger UI
 
-Available at: `http://localhost:8083/dracolich/ai/api/v0/swagger-ui.html`
+Available at: `http://<host>/dracolich/ai/api/v0/swagger-ui.html`
 
 Required fix: explicit `swagger-annotations:2.2.41` (non-jakarta) dependency to match swagger-core-jakarta version. Spring AI pulls in 2.2.25 transitively which lacks `$dynamicRef()`.
 
-## Phase 3 Readiness — Deferred Items
+## Deferred Items — launch blockers
+
+Dracolich is aimed at being a public product, so the first three below are launch blockers, not
+acceptable debt. They are currently mitigated only by the service being cluster-internal, behind
+deck-builder.
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| Authentication (Spring Security + JWT) | CRITICAL | No auth on any endpoint. Phase 3 blocker. |
-| Ownership check on DELETE | CRITICAL | Anyone can delete any session by ID |
-| Rate limiting on `/agent/chat` | HIGH | One user can burn Anthropic quota. Plan: Spring Cloud Gateway |
+| Authentication (Spring Security + JWT) | CRITICAL | No auth on any endpoint. forge's `JwtAuthenticationWebFilter` + `EcPublicKeyJwtValidator` is the ready-made path — see how deck-builder wires it. |
+| Ownership check on DELETE | CRITICAL | Anyone who can reach the service can delete any session by ID |
+| Rate limiting on `/agent/chat` | HIGH | One caller can burn the Anthropic quota. Plan: Spring Cloud Gateway |
 | Test coverage | MEDIUM | 0% — test deps declared but no tests written |
-| `application-prod.yml` | MEDIUM | Deferred to helm/argo deployment to AWS |
+| `application-prod.yml` | MEDIUM | Deferred to the Helm/ArgoCD phase |
 | Metrics/monitoring (Micrometer) | LOW | Not implemented |

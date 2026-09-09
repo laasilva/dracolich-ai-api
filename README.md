@@ -5,38 +5,41 @@ AI-powered deck building assistant for Magic: The Gathering. Uses Spring AI with
 ## Prerequisites
 
 - Java 25
-- MongoDB running on `localhost:27017`
 - Maven 3.9+
-- [dracolich-mtg-library-api](https://github.com/laasilva/dracolich-mtg-library-api) running on port 8080
-- Anthropic API key
+- `~/.m2/settings-personal.xml` with GitHub Packages credentials (for `dm.dracolich.*` artifacts)
+- MongoDB, an Anthropic API key, and a reachable mtg-library-api — only if you intend to *run* it
 
-## Quick Start
+## Build
 
 ```bash
-# Set up API key (one-time)
-echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
-
-# Build
 mvn clean install -s ~/.m2/settings-personal.xml
-
-# Run (port 8083, dev profile auto-active)
-mvn spring-boot:run -pl dracolich-ai-web -s ~/.m2/settings-personal.xml
 ```
 
-The API starts on `http://localhost:8083/dracolich/ai/api/v0/`.
+## Running
 
-Swagger UI is available at `http://localhost:8083/dracolich/ai/api/v0/swagger-ui.html`.
+The service is deployed to the `dracolich-dev` cluster and reached through
+`https://dev.dracolich.app/dracolich/ai/api/v0/`. It is **internal infrastructure**: the frontend
+never calls it directly, only `dracolich-mtg-deck-builder-api` does.
+
+Running it locally is expected when developing a feature or chasing a bug here. Create an
+uncommitted `dracolich-ai-web/src/main/resources/application-local.yml` (gitignored — never commit
+local config) and run with `SPRING_PROFILES_ACTIVE=local`; `application-dev.yml.example` is a
+starting point. Everything below without a default must be supplied there, and the port must be
+overridden if another Dracolich service is already on 8080.
+
+Swagger UI: `http://<host>/dracolich/ai/api/v0/swagger-ui.html`.
 
 ## Configuration
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8083` | Server port |
-| `MONGODB_URI` | `mongodb://localhost:27017/dracolich-ai-db` | MongoDB connection URI |
-| `MONGODB_DATABASE` | `dracolich-ai-db` | Database name |
-| `ANTHROPIC_API_KEY` | _(required)_ | Anthropic API key (via `.env` file) |
-| `MTG_LIBRARY_API_BASE_URL` | `http://localhost:8080/dracolich/mtg-library/api/v0` | MTG Library API base URL |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000,http://localhost:5173` | Allowed CORS origins |
+| `PORT` | `8080` | Server port. Actuator listens separately on `7980`. |
+| `MONGODB_URI` | _(required)_ | MongoDB connection URI |
+| `MONGODB_DATABASE` | _(required)_ | Database name |
+| `ANTHROPIC_API_KEY` | _(required)_ | Anthropic API key |
+| `DRACOLICH_MTG_LIBRARY_API_BASE_URL` | `http://localhost:8080/dracolich/mtg-library/api/v0` | MTG Library API base URL |
+| `CORS_ALLOWED_ORIGINS` | _(empty)_ | Allowed CORS origins |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Profile name only — no profile-specific config file exists |
 
 ## API Endpoints
 
@@ -148,8 +151,12 @@ The AI agent has access to three tools:
 | Tool | Purpose |
 |------|---------|
 | `CardSearchTool` | Searches the MTG Library API with filters. Returns compact results (name, cost, type, oracle text). Max 10 results per call. |
-| `DeckAnalysisTool` | Analyzes the current deck — mana curve, color balance, category breakdown, and warnings (low lands, missing removal, etc.). |
 | `SuggestCardsTool` | Formally recommends cards with structured data. Persisted to the session's `card_suggestions` field for programmatic consumption. |
+| `ReportIssuesTool` | Reports structured deck problems as `IssueDto` (with `IssueSeverity`) for programmatic consumption by the caller. |
+
+`DeckAnalysisTool` was removed — deck stats are pre-computed by `dracolich-mtg-deck-builder-api` and
+injected into the prompt, avoiding the N API calls it made per invocation. `SynergyFinderTool` was
+removed earlier for the same reason.
 
 The system prompt enforces max 1 search call per response to control token budget. Typical interaction: ~5k input tokens, ~600 output tokens.
 
@@ -222,7 +229,7 @@ dracolich-ai-api/
 │       └── dm/dracolich/ai/core/
 │           ├── config/            # AnthropicConfig (model, tokens, temperature)
 │           ├── service/           # AgentService interface + implementation
-│           └── tool/              # CardSearchTool, DeckAnalysisTool, SuggestCardsTool
+│           └── tool/              # CardSearchTool, SuggestCardsTool, ReportIssuesTool
 │
 └── dracolich-ai-web/              # Application entry point
     └── src/main/java/
@@ -244,6 +251,10 @@ dracolich-ai-api/
 
 ## Running Tests
 
-```bash
-mvn test -s ~/.m2/settings-personal.xml
-```
+There are none yet — test dependencies are declared but no tests are written.
+
+---
+
+Part of the [Dracolich](https://github.com/laasilva?tab=repositories&q=dracolich) platform. For the
+cross-repo picture — service topology, release pipeline, shared conventions — see the workspace guide
+at `~/Dev/Dracolich/CLAUDE.md`.
