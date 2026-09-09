@@ -1,9 +1,12 @@
+# Template only — check it against application.yml before trusting it.
+# Note the property roots: application.yml binds spring.mongodb.* (not spring.data.mongodb.*)
+# and the library base URL is read as dracolich.mtg-library.api.base-url.
+
 spring:
-  data:
-    mongodb:
-      auto-index-creation: true
-      database: dracolich-ai-db
-      uri: mongodb://localhost:27017/dracolich-ai-db
+  mongodb:
+    auto-index-creation: true
+    database: dracolich-ai-db
+    uri: mongodb://localhost:27017/dracolich-ai-db
 
   ai:
     anthropic:
@@ -12,9 +15,10 @@ spring:
 cors:
   allowed-origins: http://localhost:3000,http://localhost:5173
 
-mtg-library:
-  api:
-    base-url: http://localhost:8080/dracolich/mtg-library/api/v0
+dracolich:
+  mtg-library:
+    api:
+      base-url: http://localhost:8080/dracolich/mtg-library/api/v0
 
 logging:
   level:
